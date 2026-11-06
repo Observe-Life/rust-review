@@ -1,0 +1,27 @@
+#!/bin/bash
+# 用法: docker exec rust-review review [项目相对路径]
+# 默认评审 /workspace 根目录；传子目录名则评审 /workspace/<子目录>。
+# 门禁两步：先 cargo check（语言层硬校验），再 cargo clippy（仅 correctness+suspicious 阻断）。
+set -u
+
+IDLE_FILE="/run/rust-review-idle"
+touch "$IDLE_FILE" 2>/dev/null || true
+
+TARGET="${1:-.}"
+PROJECT="/workspace/${TARGET}"
+cd "$PROJECT" || { echo "[review] project not found: $PROJECT"; exit 2; }
+
+echo "[review] project: $PROJECT"
+echo "[review] step 1/2: cargo check"
+if ! cargo check --workspace --all-targets; then
+    echo "[review] FAILED at cargo check"
+    exit 1
+fi
+
+echo "[review] step 2/2: cargo clippy (deny correctness+suspicious only)"
+if ! cargo clippy --workspace --all-targets -- -A clippy::all -D clippy::correctness -D clippy::suspicious; then
+    echo "[review] FAILED at cargo clippy"
+    exit 1
+fi
+
+echo "[review] PASS"
