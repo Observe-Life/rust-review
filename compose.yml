@@ -1,0 +1,13 @@
+services:
+  rust-review:
+    image: ghcr.io/observe-life/rust-review:latest
+    container_name: rust-review
+    restart: "no"
+    environment:
+      IDLE_TIMEOUT: "600"
+    volumes:
+      # cargo 依赖缓存（持久）：第二次启动评审不再重新下载 crates.io 依赖
+      - ./data/cargo-registry:/usr/local/cargo/registry
+      - ./data/cargo-git:/usr/local/cargo/git
+      # 被评审项目放这里（宿主机目录，编译缓存 target 也跟随项目持久）
+      - ./workspace:/workspace
